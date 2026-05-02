@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / credentials
+config.py
+.env
+*.env
+
+# Virtual environments
+.venv/
+venv/
+
+# Output files
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# test data
+test_data/
+
+# csv exports folder
+exports/
