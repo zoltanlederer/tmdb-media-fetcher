@@ -23,6 +23,13 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Database
+data/
+
+# Data files
+*.csv
+*.db
+
 # test data
 test_data/
 
