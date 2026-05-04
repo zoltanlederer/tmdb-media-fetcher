@@ -1,0 +1,7 @@
+# Database
+DB_PATH = "/absolute/path/to/your/media.db"
+
+# TMDB API
+TMDB_API_KEY = "your_tmdb_api_key_here"
+TMDB_BASE_URL = "https://api.themoviedb.org/3"
+TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
