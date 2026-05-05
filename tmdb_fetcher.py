@@ -36,3 +36,15 @@ def get_unenriched_titles(conn):
     cursor.execute('SELECT * FROM media WHERE poster_path IS NULL') # sends the SQL to the database
     return cursor.fetchall() # collects all the results and returns them as a list of tuples
 
+
+def main():
+    """ Connects the functions """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row # return rows as dictionaries instead of tuple
+    setup_database_columns(conn)
+    titles = get_unenriched_titles(conn)
+    print(f'Titles to enrich: {len(titles)}')
+    print(dict(titles[0]))
+
+
+main()
