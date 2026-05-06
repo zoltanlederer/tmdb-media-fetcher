@@ -37,6 +37,28 @@ def get_unenriched_titles(conn):
     return cursor.fetchall() # collects all the results and returns them as a list of tuples
 
 
+def find_tmdb_id_by_imdb_id(imdb_id):
+    """Look up a TMDB ID using an IMDB ID.
+    
+    Returns a tuple (tmdb_id, media_type) if found, or None if not found.
+    media_type is either 'movie' or 'tv'.
+    """
+    try:
+        params = {'external_source': 'imdb_id', 'api_key': TMDB_API_KEY}
+        response = requests.get(TMDB_BASE_URL + '/find/' + imdb_id, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if data['movie_results']:
+            return data['movie_results'][0]['id'], 'movie'
+        if data['tv_results']:
+            return data['tv_results'][0]['id'], 'tv'
+        return None
+        
+    except requests.exceptions.RequestException as error:
+        print(f"Something went wrong: {error}")
+        return None
+
+
 def main():
     """ Connects the functions """
     conn = sqlite3.connect(DB_PATH)
@@ -47,4 +69,6 @@ def main():
     print(dict(titles[0]))
 
 
-main()
+# main()
+
+# find_tmdb_id_by_imdb_id('tt0415856')
