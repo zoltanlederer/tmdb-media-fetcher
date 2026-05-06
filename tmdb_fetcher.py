@@ -44,7 +44,7 @@ def find_tmdb_id_by_imdb_id(imdb_id):
     media_type is either 'movie' or 'tv'.
     """
     try:
-        params = {'external_source': 'imdb_id', 'api_key': TMDB_API_KEY}
+        params = {'api_key': TMDB_API_KEY, 'external_source': 'imdb_id'}
         response = requests.get(TMDB_BASE_URL + '/find/' + imdb_id, params=params)
         response.raise_for_status()
         data = response.json()
@@ -54,6 +54,24 @@ def find_tmdb_id_by_imdb_id(imdb_id):
             return data['tv_results'][0]['id'], 'tv'
         return None
         
+    except requests.exceptions.RequestException as error:
+        print(f"Something went wrong: {error}")
+        return None
+
+
+def fetch_tmdb_data(tmdb_id, media_type):
+    """Fetch movie or TV show data from TMDB including credits in one API call.
+    
+    Returns the full API response as a dictionary, or None if the request fails.
+    media_type should be either 'movie' or 'tv'.
+    """
+    try:
+        url = f'{TMDB_BASE_URL}/{media_type}/{tmdb_id}'
+        params = {'api_key': TMDB_API_KEY, 'append_to_response': 'credits'}
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+
     except requests.exceptions.RequestException as error:
         print(f"Something went wrong: {error}")
         return None
@@ -72,3 +90,5 @@ def main():
 # main()
 
 # find_tmdb_id_by_imdb_id('tt0415856')
+
+# print(fetch_tmdb_data('41062', 'movie'))
