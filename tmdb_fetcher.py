@@ -67,6 +67,7 @@ def fetch_tmdb_data(tmdb_id, media_type):
     """
     try:
         url = f'{TMDB_BASE_URL}/{media_type}/{tmdb_id}'
+        print(url)
         params = {'api_key': TMDB_API_KEY, 'append_to_response': 'credits'}
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -80,7 +81,6 @@ def fetch_tmdb_data(tmdb_id, media_type):
 def parse_movie_data(data):
     """Extract poster, runtime, description, director and top 10 cast members into a dictionary."""
     try:
-        # print(data)
         poster = data['poster_path']
         runtime = data['runtime']
         description = data['overview']
@@ -97,12 +97,37 @@ def parse_movie_data(data):
         directors = ', '.join(directors)
         cast = ', '.join(cast)
 
-        return {'poster': poster, 'runtime': runtime, 'description': description, "cast": cast, 'directors': directors}
+        return {'poster': poster, 'runtime': runtime, 'description': description, 'cast': cast, 'directors': directors}
 
     except KeyError as error:
         print(f'Missing field in TMDB response: {error}')
         return None
-    
+
+
+def parse_tv_data(data):
+    """Extract poster, number of seasons and episodes, description, creators and top 10 cast members into a dictionary."""
+    try:
+        poster = data['poster_path']
+        description = data['overview']
+        number_of_seasons = data['number_of_seasons']
+        number_of_episodes = data['number_of_episodes']
+        creators = []
+        cast = []
+
+        for person in data['created_by']:
+            creators.append(person['name'])
+
+        for person in data['credits']['cast'][:10]:
+            cast.append(person['name'])
+
+        creators = ', '.join(creators)
+        cast = ', '.join(cast)
+
+        return {'poster': poster, 'description': description, 'number_of_seasons': number_of_seasons, 'number_of_episodes': number_of_episodes, 'cast': cast, 'directors': creators}
+
+    except KeyError as error:
+        print(f'Missing field in TMDB response: {error}')
+        return None
 
 
 def main():
@@ -117,9 +142,15 @@ def main():
 
 # main()
 
-tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0415856')
+# tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0415856') # Movie
+tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0108778') # TV
+print(tmdb_id, media_type)
 data = fetch_tmdb_data(tmdb_id, media_type)
-extra_data = parse_movie_data(data)
+if media_type == 'movie':
+    extra_data = parse_movie_data(data) # Movie
+elif media_type == 'tv':
+    extra_data = parse_tv_data(data) # TV
+
 # print(tmdb_id, media_type)
 print(extra_data)
 
