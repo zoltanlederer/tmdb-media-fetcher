@@ -77,6 +77,34 @@ def fetch_tmdb_data(tmdb_id, media_type):
         return None
 
 
+def parse_movie_data(data):
+    """Extract poster, runtime, description, director and top 10 cast members into a dictionary."""
+    try:
+        # print(data)
+        poster = data['poster_path']
+        runtime = data['runtime']
+        description = data['overview']
+        directors = []
+        cast = []
+
+        for person in data['credits']['crew']:
+            if person['job'] == 'Director':                
+                directors.append(person['name'])
+
+        for person in data['credits']['cast'][:10]:
+            cast.append(person['name'])
+
+        directors = ', '.join(directors)
+        cast = ', '.join(cast)
+
+        return {'poster': poster, 'runtime': runtime, 'description': description, "cast": cast, 'directors': directors}
+
+    except KeyError as error:
+        print(f'Missing field in TMDB response: {error}')
+        return None
+    
+
+
 def main():
     """ Connects the functions """
     conn = sqlite3.connect(DB_PATH)
@@ -89,6 +117,12 @@ def main():
 
 # main()
 
-# find_tmdb_id_by_imdb_id('tt0415856')
+tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0415856')
+data = fetch_tmdb_data(tmdb_id, media_type)
+extra_data = parse_movie_data(data)
+# print(tmdb_id, media_type)
+print(extra_data)
 
-# print(fetch_tmdb_data('41062', 'movie'))
+
+
+# data['credits']['crew'][0][]
