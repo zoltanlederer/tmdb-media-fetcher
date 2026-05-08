@@ -9,6 +9,7 @@ import sqlite3
 import requests
 import time
 import csv
+import os
 from datetime import datetime
 from config import DB_PATH, TMDB_API_KEY, TMDB_BASE_URL
 
@@ -143,6 +144,24 @@ def update_database(conn, imdb_id, media_type, data):
     cursor.execute(update_statement, params)
     conn.commit()
 
+
+def log_unmatched(title, reason):
+    """Log a title that couldn't be enriched to unmatched.csv, including the reason and timestamp."""
+    try:
+        file_exists = os.path.exists('./data/unmatched.csv')
+        with open('./data/unmatched.csv', 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)            
+            if not file_exists:
+                writer.writerow(['title', 'reason', 'timestamp'])            
+            writer.writerow([title, reason, datetime.now()])
+    except PermissionError:
+        print(f'Permission denied. Could not write to unmatched.csv')
+    except OSError as error:
+        print(f'Could not create file: {error}')
+    except Exception:
+        print('Something went wrong while writing the file.')
+
+
 def main():
     """ Connects the functions """
     conn = sqlite3.connect(DB_PATH)
@@ -154,6 +173,8 @@ def main():
 
 
 # main()
+
+log_unmatched('Friends', 'no_match')
 
 # tt4154796 Movie
 # tt0108778 TV
