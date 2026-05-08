@@ -128,6 +128,11 @@ def parse_tv_data(data):
     except KeyError as error:
         print(f'Missing field in TMDB response: {error}')
         return None
+    
+
+# def update_databse(conn, imdb_id, data):
+#     """  """
+
 
 
 def main():
@@ -139,20 +144,23 @@ def main():
     print(f'Titles to enrich: {len(titles)}')
     print(dict(titles[0]))
 
+    # tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0108778') # TV
+    # print(tmdb_id, media_type)
+    # data = fetch_tmdb_data(tmdb_id, media_type)
+    # if media_type == 'movie':
+    #     extra_data = parse_movie_data(data) # Movie
+    # elif media_type == 'tv':
+    #     extra_data = parse_tv_data(data) # TV
+    
+    # print(extra_data)
 
-# main()
+main()
 
 # tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0415856') # Movie
-tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0108778') # TV
-print(tmdb_id, media_type)
-data = fetch_tmdb_data(tmdb_id, media_type)
-if media_type == 'movie':
-    extra_data = parse_movie_data(data) # Movie
-elif media_type == 'tv':
-    extra_data = parse_tv_data(data) # TV
+
 
 # print(tmdb_id, media_type)
-print(extra_data)
+
 
 
 
