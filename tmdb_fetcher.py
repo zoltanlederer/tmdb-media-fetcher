@@ -129,18 +129,18 @@ def parse_tv_data(data):
         return None
     
 
-def update_database(conn, imdb_id, data):
-    """  """
-    # print(conn)
-    # print(imdb_id)
-    # print(data) 
-    poster_path = data['poster']
-    cast = data['cast']
-    # print(poster_path)
-    # print(cast)
-    update_statement = 'UPDATE media SET poster_path = ?, cast = ? WHERE imdb_id = ?'
+def update_database(conn, imdb_id, media_type, data):
+    """Write enriched TMDB data back into the database for a single title.
+    Handles movies and TV shows separately as they have different fields.
+    """
+    if media_type == 'movie':
+        update_statement = 'UPDATE media SET poster_path = ?, `cast` = ?, directors = ?, runtime_mins = ?, description = ? WHERE imdb_id = ?'
+        params = (data['poster'], data['cast'], data['directors'], data['runtime'], data['description'], imdb_id)
+    elif media_type == 'tv':
+        update_statement = 'UPDATE media SET poster_path = ?, `cast` = ?, directors = ?, number_of_seasons = ?, number_of_episodes = ?, description = ? WHERE imdb_id = ?'
+        params = (data['poster'], data['cast'], data['directors'], data['number_of_seasons'], data['number_of_episodes'], data['description'], imdb_id)
     cursor = conn.cursor()
-    cursor.execute(update_statement, (poster_path, cast, imdb_id))
+    cursor.execute(update_statement, params)
     conn.commit()
 
 def main():
@@ -155,28 +155,27 @@ def main():
 
 # main()
 
-# tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0415856') # Movie
-tmdb_id, media_type = find_tmdb_id_by_imdb_id('tt0108778') # TV
-# print(tmdb_id, media_type)
-data = fetch_tmdb_data(tmdb_id, media_type)
-if media_type == 'movie':
-    extra_data = parse_movie_data(data) # Movie
-elif media_type == 'tv':
-    extra_data = parse_tv_data(data) # TV
+# tt4154796 Movie
+# tt0108778 TV
+# def test_update(imdb_id):
+#     conn = sqlite3.connect(DB_PATH)
+#     conn.row_factory = sqlite3.Row
+#     cursor = conn.cursor()
+#     tmdb_id, media_type = find_tmdb_id_by_imdb_id(imdb_id)
+#     data = fetch_tmdb_data(tmdb_id, media_type)
+#     if media_type == 'movie':
+#         extra_data = parse_movie_data(data) # Movie
+#     elif media_type == 'tv':
+#         extra_data = parse_tv_data(data) # TV
 
-# print(tmdb_id, media_type)
-# print(extra_data)
-imdb_id = 'tt0108778'
-conn = sqlite3.connect(DB_PATH)
-conn.row_factory = sqlite3.Row
-cursor = conn.cursor()
-cursor.execute("SELECT poster_path, `cast` FROM media WHERE imdb_id = 'tt0108778'")
-print("BEFORE:", dict(cursor.fetchone()))
-update_database(conn, imdb_id, extra_data)
-cursor.execute("SELECT poster_path, `cast` FROM media WHERE imdb_id = 'tt0108778'")
-print("AFTER:", dict(cursor.fetchone()))
-cursor.execute("UPDATE media SET poster_path = NULL, `cast` = NULL WHERE imdb_id = 'tt0108778'")
-conn.commit()
-print("RESET done")
+#     cursor.execute(f"SELECT poster_path, `cast`, directors, runtime_mins, description FROM media WHERE imdb_id = '{imdb_id}'")
+#     print("BEFORE:", dict(cursor.fetchone()))
+#     update_database(conn, imdb_id, media_type, extra_data)
+#     cursor.execute(f"SELECT poster_path, `cast`, directors, runtime_mins, description FROM media WHERE imdb_id = '{imdb_id}'")
+#     print("AFTER:", dict(cursor.fetchone()))
+#     cursor.execute(f"UPDATE media SET poster_path = NULL, `cast` = NULL, directors = NULL, runtime_mins = NULL, description = NULL WHERE imdb_id = '{imdb_id}'")
+#     conn.commit()
+#     print("RESET done")
 
-# data['credits']['crew'][0][]
+# test_update('tt4154796')
+# test_update('tt0108778')
