@@ -40,15 +40,15 @@ def get_unenriched_titles(conn):
 
 def find_tmdb_id_by_imdb_id(imdb_id):
     """Look up a TMDB ID using an IMDB ID.
-    
+
     Returns a tuple (tmdb_id, media_type) if found, or None if not found.
-    media_type is either 'movie' or 'tv'.
+    media_type is either 'movie' or 'tv_show'.
     """
     try:
         params = {'api_key': TMDB_API_KEY, 'external_source': 'imdb_id'}
         response = requests.get(TMDB_BASE_URL + '/find/' + imdb_id, params=params)
-        response.raise_for_status()
-        data = response.json()
+        response.raise_for_status() # Raises HTTPError for 4xx/5xx status codes
+        data = response.json() # Process data only if successful
         if data['movie_results']:
             return data['movie_results'][0]['id'], 'movie'
         if data['tv_results']:
@@ -142,8 +142,8 @@ def update_database(conn, imdb_id, media_type, data):
         update_statement = 'UPDATE media SET poster_path = ?, `cast` = ?, directors = ?, number_of_seasons = ?, number_of_episodes = ?, description = ? WHERE imdb_id = ?'
         params = (data['poster'], data['cast'], data['directors'], data['number_of_seasons'], data['number_of_episodes'], data['description'], imdb_id)
     cursor = conn.cursor()
-    cursor.execute(update_statement, params)
-    conn.commit()
+    cursor.execute(update_statement, params) # execute a parameterised query — values passed as a tuple, ? as placeholders
+    conn.commit() # permanently save the changes to the database
 
 
 def log_unmatched(title, reason):
@@ -153,7 +153,7 @@ def log_unmatched(title, reason):
         with open('./data/unmatched.csv', 'a', newline='') as csvfile:
             writer = csv.writer(csvfile)            
             if not file_exists:
-                writer.writerow(['title', 'reason', 'timestamp'])            
+                writer.writerow(['title', 'reason', 'timestamp']) # write header row only when the file is created for the first time    
             writer.writerow([title, reason, datetime.now()])
     except PermissionError:
         print(f'Permission denied. Could not write to unmatched.csv')
@@ -167,15 +167,15 @@ def main():
     """Main function — loops through unenriched titles and enriches them via the TMDB API."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row # return rows as dictionaries instead of tuple
-    setup_database_columns(conn)
-    titles = get_unenriched_titles(conn)
+    setup_database_columns(conn) # Add enrichment columns to the media table if they don't exist yet
+    titles = get_unenriched_titles(conn) # Fetch all rows from the database that haven't been enriched yet
     print(f'Titles to enrich: {len(titles)}')
 
     for index, title in enumerate(titles, start=1):
         if title['tmdb_id'] is not None:
-            data = fetch_tmdb_data(title['tmdb_id'], title['type'])
+            data = fetch_tmdb_data(title['tmdb_id'], title['type']) # fetch movie or TV show data from TMDB including credits in one API call.
             if data is None:
-                log_unmatched(title['title'], 'fetch_failed')
+                log_unmatched(title['title'], 'fetch_failed') # log a title that couldn't be enriched to unmatched.csv
                 continue # skips the rest of the loop for that title and moves to the next one
         elif title['imdb_id'] is not None:
             result = find_tmdb_id_by_imdb_id(title['imdb_id'])
@@ -192,47 +192,22 @@ def main():
             continue
 
         if title['type'] == 'movie':
-            extra_data = parse_movie_data(data)
+            extra_data = parse_movie_data(data) # extract the extra/missing information from the data
             if extra_data is None:
                 log_unmatched(title['title'], 'parse_failed')
                 continue
         elif title['type'] == 'tv_show':
-            extra_data = parse_tv_data(data)
+            extra_data = parse_tv_data(data) # extract the extra/missing information from the data
             if extra_data is None:
                 log_unmatched(title['title'], 'parse_failed')
                 continue
 
         time.sleep(0.25) # wait 250ms between calls
         
-        update_database(conn, title['imdb_id'], title['type'], extra_data)
+        update_database(conn, title['imdb_id'], title['type'], extra_data) # write enriched TMDB data back into the database for a single title
         print(f"[{index}/{len(titles)}] Enriched: {title['title']}")
 
-    conn.close()
+    conn.close() # Close the connection safely
     print("Done.") 
 
 main()
-
-# tt4154796 Movie
-# tt0108778 TV
-# def test_update(imdb_id):
-#     conn = sqlite3.connect(DB_PATH)
-#     conn.row_factory = sqlite3.Row
-#     cursor = conn.cursor()
-#     tmdb_id, media_type = find_tmdb_id_by_imdb_id(imdb_id)
-#     data = fetch_tmdb_data(tmdb_id, media_type)
-#     if media_type == 'movie':
-#         extra_data = parse_movie_data(data) # Movie
-#     elif media_type == 'tv_show':
-#         extra_data = parse_tv_data(data) # TV
-
-#     cursor.execute(f"SELECT poster_path, `cast`, directors, runtime_mins, description FROM media WHERE imdb_id = '{imdb_id}'")
-#     print("BEFORE:", dict(cursor.fetchone()))
-#     update_database(conn, imdb_id, media_type, extra_data)
-#     cursor.execute(f"SELECT poster_path, `cast`, directors, runtime_mins, description FROM media WHERE imdb_id = '{imdb_id}'")
-#     print("AFTER:", dict(cursor.fetchone()))
-#     cursor.execute(f"UPDATE media SET poster_path = NULL, `cast` = NULL, directors = NULL, runtime_mins = NULL, description = NULL WHERE imdb_id = '{imdb_id}'")
-#     conn.commit()
-#     print("RESET done")
-
-# test_update('tt4154796')
-# test_update('tt0108778')
