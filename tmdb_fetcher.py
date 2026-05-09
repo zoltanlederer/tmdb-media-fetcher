@@ -163,18 +163,50 @@ def log_unmatched(title, reason):
 
 
 def main():
-    """ Connects the functions """
+    """Main function — loops through unenriched titles and enriches them via the TMDB API."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row # return rows as dictionaries instead of tuple
     setup_database_columns(conn)
     titles = get_unenriched_titles(conn)
     print(f'Titles to enrich: {len(titles)}')
-    print(dict(titles[0]))
 
+    for title in titles:
+        
+        if title['tmdb_id'] is not None:
+            data = fetch_tmdb_data(title['tmdb_id'], title['type'])
+            if data is None:
+                log_unmatched(title['title'], 'fetch_failed')
+                continue # skips the rest of the loop for that title and moves to the next one
+        elif title['imdb_id'] is not None:
+            tmdb_id, media_type = find_tmdb_id_by_imdb_id(title['imdb_id'])
+            data = fetch_tmdb_data(tmdb_id, media_type)
+            if data is None:
+                log_unmatched(title['title'], 'fetch_failed')
+                continue # skips the rest of the loop for that title and moves to the next one
+        else:
+            log_unmatched(title['title'], 'no_match')
+            continue
 
-# main()
+        if title['type'] == 'movie':
+            extra_data = parse_movie_data(data)
+            if extra_data is None:
+                log_unmatched(title['title'], 'parse_failed')
+                continue
+        elif title['type'] == 'tv':
+            extra_data = parse_tv_data(data)
+            if extra_data is None:
+                log_unmatched(title['title'], 'parse_failed')
+                continue
 
-log_unmatched('Friends', 'no_match')
+        time.sleep(0.25) # wait 250ms between calls
+        
+        update_database(conn, title['imdb_id'], title['type'], extra_data)
+        print(f"Enriched: {title['title']}")
+
+    conn.close()
+    print("Done.") 
+
+main()
 
 # tt4154796 Movie
 # tt0108778 TV
