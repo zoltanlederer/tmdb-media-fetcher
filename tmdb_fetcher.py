@@ -62,12 +62,13 @@ def find_tmdb_id_by_imdb_id(imdb_id):
 
 def fetch_tmdb_data(tmdb_id, media_type):
     """Fetch movie or TV show data from TMDB including credits in one API call.
-    
+
     Returns the full API response as a dictionary, or None if the request fails.
-    media_type should be either 'movie' or 'tv'.
+    media_type should be either 'movie' or 'tv_show'.
     """
     try:
-        url = f'{TMDB_BASE_URL}/{media_type}/{tmdb_id}'
+        media_type_fix = 'tv' if media_type == 'tv_show' else 'movie'
+        url = f'{TMDB_BASE_URL}/{media_type_fix}/{tmdb_id}'
         params = {'api_key': TMDB_API_KEY, 'append_to_response': 'credits'}
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -109,12 +110,12 @@ def parse_tv_data(data):
     try:
         poster = data['poster_path']
         description = data['overview']
-        number_of_seasons = data['number_of_seasons']
-        number_of_episodes = data['number_of_episodes']
+        number_of_seasons = data.get('number_of_seasons') # .get() returns None if the key doesn't exist instead of raising a KeyError
+        number_of_episodes = data.get('number_of_episodes')
         creators = []
         cast = []
 
-        for person in data['created_by']:
+        for person in data.get('created_by', []): # The [] is the default value — if created_by doesn't exist, the loop runs over an empty list and creators stays empty. No crash, no KeyError
             creators.append(person['name'])
 
         for person in data['credits']['cast'][:10]:
@@ -137,7 +138,7 @@ def update_database(conn, imdb_id, media_type, data):
     if media_type == 'movie':
         update_statement = 'UPDATE media SET poster_path = ?, `cast` = ?, directors = ?, runtime_mins = ?, description = ? WHERE imdb_id = ?'
         params = (data['poster'], data['cast'], data['directors'], data['runtime'], data['description'], imdb_id)
-    elif media_type == 'tv':
+    elif media_type == 'tv_show':
         update_statement = 'UPDATE media SET poster_path = ?, `cast` = ?, directors = ?, number_of_seasons = ?, number_of_episodes = ?, description = ? WHERE imdb_id = ?'
         params = (data['poster'], data['cast'], data['directors'], data['number_of_seasons'], data['number_of_episodes'], data['description'], imdb_id)
     cursor = conn.cursor()
@@ -170,15 +171,18 @@ def main():
     titles = get_unenriched_titles(conn)
     print(f'Titles to enrich: {len(titles)}')
 
-    for title in titles:
-        
+    for index, title in enumerate(titles, start=1):
         if title['tmdb_id'] is not None:
             data = fetch_tmdb_data(title['tmdb_id'], title['type'])
             if data is None:
                 log_unmatched(title['title'], 'fetch_failed')
                 continue # skips the rest of the loop for that title and moves to the next one
         elif title['imdb_id'] is not None:
-            tmdb_id, media_type = find_tmdb_id_by_imdb_id(title['imdb_id'])
+            result = find_tmdb_id_by_imdb_id(title['imdb_id'])
+            if result is None:
+                log_unmatched(title['title'], 'no_match')
+                continue
+            tmdb_id, media_type = result
             data = fetch_tmdb_data(tmdb_id, media_type)
             if data is None:
                 log_unmatched(title['title'], 'fetch_failed')
@@ -192,7 +196,7 @@ def main():
             if extra_data is None:
                 log_unmatched(title['title'], 'parse_failed')
                 continue
-        elif title['type'] == 'tv':
+        elif title['type'] == 'tv_show':
             extra_data = parse_tv_data(data)
             if extra_data is None:
                 log_unmatched(title['title'], 'parse_failed')
@@ -201,7 +205,7 @@ def main():
         time.sleep(0.25) # wait 250ms between calls
         
         update_database(conn, title['imdb_id'], title['type'], extra_data)
-        print(f"Enriched: {title['title']}")
+        print(f"[{index}/{len(titles)}] Enriched: {title['title']}")
 
     conn.close()
     print("Done.") 
@@ -218,7 +222,7 @@ main()
 #     data = fetch_tmdb_data(tmdb_id, media_type)
 #     if media_type == 'movie':
 #         extra_data = parse_movie_data(data) # Movie
-#     elif media_type == 'tv':
+#     elif media_type == 'tv_show':
 #         extra_data = parse_tv_data(data) # TV
 
 #     cursor.execute(f"SELECT poster_path, `cast`, directors, runtime_mins, description FROM media WHERE imdb_id = '{imdb_id}'")
