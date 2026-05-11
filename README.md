@@ -39,6 +39,8 @@ pip install -r requirements.txt
 Copy `config.example.py` to `config.py`. Then edit `config.py` and fill in your TMDB API key and the path to your SQLite database.  
 You can get a free API key at [themoviedb.org](https://www.themoviedb.org/settings/api).
 
+> **Note:** This script expects an existing SQLite database with a `media` table. It was built as part of a media library pipeline — see [sql-movie-explorer](https://github.com/zoltanlederer/sql-movie-explorer) for the project that creates the database.
+
 ## Usage
 
 ```bash
